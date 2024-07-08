@@ -3,10 +3,11 @@ import numpy as np
 import argparse
 
 from pytrigno import TrignoCommand, TrignoData
+from filter import freq_filter
 
 if __name__=="__main__":
     host_ip = "192.168.152.1"
-    sensor_id = 0
+    sensor_id = 1
     # parser = argparse.ArgumentParser()
     # parser.add_argument("-h", "--host", default="192.168.152.1", type=str)
     
@@ -16,8 +17,8 @@ if __name__=="__main__":
     trig_data = TrignoData(sensor_range=(0,3),host=host_ip)
 
     emg_data_buffer_size = 2000
-    acc_data_buffer_size = 2000
-    gyro_data_buffer_size = 2000
+    acc_data_buffer_size = 200
+    gyro_data_buffer_size = 200
 
     emg_data = np.zeros(emg_data_buffer_size)
     emg_x_axis = np.linspace(1,emg_data_buffer_size,emg_data_buffer_size)
@@ -51,20 +52,26 @@ if __name__=="__main__":
     gyro_leg = ax_gyro.legend(loc="upper right")
 
     trig_cmd.start()
+    i_emg = sensor_id -1
+    i_acc = ((sensor_id-1)*9, (sensor_id-1)*9+3)
+    i_gyro = ((sensor_id-1)*9+3, (sensor_id-1)*9+6)
 
     for i in range(1000):
-        new_emg_data = trig_data.readEMG()
+        new_emg_data = trig_data.readEMG()*1000
         new_imu_data = trig_data.readIMU()
 
-        emg_data = np.delete(emg_data,np.linspace(0,len(new_emg_data[sensor_id])-1,len(new_emg_data[sensor_id])))
-        acc_data = np.delete(acc_data,np.linspace(0,len(new_imu_data[sensor_id*9])-1,len(new_imu_data[sensor_id*9])),1)
-        gyro_data = np.delete(gyro_data,np.linspace(0,len(new_imu_data[sensor_id*9+3])-1,len(new_imu_data[sensor_id*9+3])),1)
+        new_emg_data_size = len(new_emg_data[i_emg])
+        new_acc_data_size = len(new_imu_data[i_acc[0]])
+        new_gyro_data_size = len(new_imu_data[i_gyro[0]])
+        emg_data = np.delete(emg_data,np.linspace(0,new_emg_data_size-1,new_emg_data_size,dtype=int))
+        acc_data = np.delete(acc_data,np.linspace(0,new_acc_data_size-1,new_acc_data_size,dtype=int),1)
+        gyro_data = np.delete(gyro_data,np.linspace(0,new_gyro_data_size-1,new_gyro_data_size,dtype=int),1)
 
-        emg_data = np.concatenate((emg_data, new_emg_data[sensor_id]), axis=None)
-        acc_data = np.concatenate((acc_data, new_imu_data[sensor_id*9:sensor_id*9+3]), axis=1)
-        gyro_data = np.concatenate((gyro_data, new_imu_data[sensor_id*9+3:sensor_id*9+6]), axis=1)
+        emg_data = np.concatenate((emg_data, new_emg_data[i_emg]), axis=None)
+        acc_data = np.concatenate((acc_data, new_imu_data[i_acc[0]:i_acc[1]]), axis=1)
+        gyro_data = np.concatenate((gyro_data, new_imu_data[i_gyro[0]:i_gyro[1]]), axis=1)
 
-        line_emg.set_ydata(emg_data)
+        line_emg.set_ydata(freq_filter(emg_data,500,0.5))
         line_acc_x.set_ydata(acc_data[0])
         line_acc_y.set_ydata(acc_data[1])
         line_acc_z.set_ydata(acc_data[2])

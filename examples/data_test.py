@@ -44,7 +44,7 @@ def plotIMUdata():
 
 
     for i in range(100):
-        new_data=trig_imu.read() 
+        new_data=trig_imu.read()
         
         if len(x_acc) >= 20:
             x_acc = np.delete(x_acc,0)
