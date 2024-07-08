@@ -14,15 +14,15 @@ Use `-h` or `--help` for options.
 import argparse
 
 try:
-    import pytrigno
+    import pytrigno_og
 except ImportError:
     import sys
     sys.path.insert(0, '..')
-    import pytrigno
+    import pytrigno_og
 
 
 def check_emg(host):
-    dev = pytrigno.TrignoEMG(channel_range=(0, 0), samples_per_read=270,
+    dev = pytrigno_og.TrignoEMG(channel_range=(0, 0), samples_per_read=270,
                              host=host)
 
     # test single-channel
@@ -42,7 +42,7 @@ def check_emg(host):
 
 
 def check_accel(host):
-    dev = pytrigno.TrignoAccel(channel_range=(0, 2), samples_per_read=10,
+    dev = pytrigno_og.TrignoAccel(channel_range=(0, 2), samples_per_read=10,
                                host=host)
 
     dev.start()

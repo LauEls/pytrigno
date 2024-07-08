@@ -1,0 +1,78 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import argparse
+
+from pytrigno import TrignoCommand, TrignoData
+
+if __name__=="__main__":
+    host_ip = "192.168.152.1"
+    sensor_id = 0
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("-h", "--host", default="192.168.152.1", type=str)
+    
+    # args = parser.parse_args()
+
+    trig_cmd = TrignoCommand(host=host_ip)
+    trig_data = TrignoData(sensor_range=(0,3),host=host_ip)
+
+    emg_data_buffer_size = 2000
+    acc_data_buffer_size = 2000
+    gyro_data_buffer_size = 2000
+
+    emg_data = np.zeros(emg_data_buffer_size)
+    emg_x_axis = np.linspace(1,emg_data_buffer_size,emg_data_buffer_size)
+    acc_data = np.zeros((3,acc_data_buffer_size))
+    acc_x_axis = np.linspace(1,acc_data_buffer_size,acc_data_buffer_size)
+    gyro_data = np.zeros((3,gyro_data_buffer_size))
+    gyro_x_axis = np.linspace(1,gyro_data_buffer_size,gyro_data_buffer_size)
+
+    plt.ion()
+    figure, (ax_emg,ax_acc,ax_gyro) = plt.subplots(3,1,figsize=(10*3,8*3))
+    line_emg, = ax_emg.plot(emg_x_axis, emg_data)
+    ax_emg.set_ylim(-4, 4)
+    ax_emg.set_title("EMG Sensor "+str(sensor_id))
+    ax_emg.set_xlabel("sample in buffer")
+    ax_emg.set_ylabel("muscle activity [mV]")
+    line_acc_x, = ax_acc.plot(acc_x_axis, acc_data[0], label='x')
+    line_acc_y, = ax_acc.plot(acc_x_axis, acc_data[1], label='y')
+    line_acc_z, = ax_acc.plot(acc_x_axis, acc_data[2], label='z')
+    ax_acc.set_ylim(-2, 2)
+    ax_acc.set_title("Accelerometer")
+    ax_acc.set_xlabel("sample in buffer")
+    ax_acc.set_ylabel("acceleration/9.8 [ms^2]")
+    acc_leg = ax_acc.legend(loc="upper right")
+    line_gyro_x, = ax_gyro.plot(gyro_x_axis, gyro_data[0], label='x')
+    line_gyro_y, = ax_gyro.plot(gyro_x_axis, gyro_data[1], label='y')
+    line_gyro_z, = ax_gyro.plot(gyro_x_axis, gyro_data[2], label='z')
+    ax_gyro.set_ylim(-200, 200)
+    ax_gyro.set_title("Gyroscope")
+    ax_gyro.set_xlabel("sample in buffer")
+    ax_gyro.set_ylabel("angular velocity [deg/s]")
+    gyro_leg = ax_gyro.legend(loc="upper right")
+
+    trig_cmd.start()
+
+    for i in range(1000):
+        new_emg_data = trig_data.readEMG()
+        new_imu_data = trig_data.readIMU()
+
+        emg_data = np.delete(emg_data,np.linspace(0,len(new_emg_data[sensor_id])-1,len(new_emg_data[sensor_id])))
+        acc_data = np.delete(acc_data,np.linspace(0,len(new_imu_data[sensor_id*9])-1,len(new_imu_data[sensor_id*9])),1)
+        gyro_data = np.delete(gyro_data,np.linspace(0,len(new_imu_data[sensor_id*9+3])-1,len(new_imu_data[sensor_id*9+3])),1)
+
+        emg_data = np.concatenate((emg_data, new_emg_data[sensor_id]), axis=None)
+        acc_data = np.concatenate((acc_data, new_imu_data[sensor_id*9:sensor_id*9+3]), axis=1)
+        gyro_data = np.concatenate((gyro_data, new_imu_data[sensor_id*9+3:sensor_id*9+6]), axis=1)
+
+        line_emg.set_ydata(emg_data)
+        line_acc_x.set_ydata(acc_data[0])
+        line_acc_y.set_ydata(acc_data[1])
+        line_acc_z.set_ydata(acc_data[2])
+        line_gyro_x.set_ydata(gyro_data[0])
+        line_gyro_y.set_ydata(gyro_data[1])
+        line_gyro_z.set_ydata(gyro_data[2])
+
+        figure.canvas.draw()
+        figure.canvas.flush_events()
+
+    trig_cmd.stop()
