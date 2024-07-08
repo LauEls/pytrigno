@@ -68,7 +68,12 @@ class _BaseTrignoDaq(object):
         You should call ``read()`` soon after this, though the device typically
         takes about two seconds to send back the first batch of data.
         """
+        self._send_cmd('SENSOR 1 TYPE?')
         self._send_cmd('START')
+        ret_value = self._send_cmd('SENSOR 1 EMGCHANNELCOUNT?')
+        ret_value = self._send_cmd('SENSOR 1 MODE?')
+        
+        print(str(ret_value))
 
     def read(self, num_samples):
         """
@@ -93,17 +98,33 @@ class _BaseTrignoDaq(object):
         packet = bytes()
         while l < l_des:
             try:
-                packet += self._data_socket.recv(l_des - l)
+                # packet += self._data_socket.recv(l_des - l)
+                packet += self._data_socket.recv(1000000)
             except socket.timeout:
                 l = len(packet)
                 packet += b'\x00' * (l_des - l)
                 raise IOError("Device disconnected.")
             l = len(packet)
 
-        print(packet)
+        #print(packet)
+        print("packet len: ", len(packet))
+        num_samples_recv = int(len(packet)/self.BYTES_PER_CHANNEL)
+        # test_data = [x[0] for x in struct.iter_unpack('<f', packet)]
+        # print("len test_data: ", len(test_data))
+        # print("before: ", test_data)
+        # for i in range(len(packet)):
+        #     print(packet[i])
+        # data = numpy.asarray(
+        #     struct.unpack('<'+'f'*self.total_channels*num_samples, packet))
         data = numpy.asarray(
-            struct.unpack('<'+'f'*self.total_channels*num_samples, packet))
+            struct.unpack('<'+'f'*num_samples_recv, packet))
+        print("after: ",data[0:40])
+        print("modulo: ",len(data)%16)
+        if len(data)%16 != 0:
+            data = numpy.append(data,numpy.zeros(16-len(data)%16))
+        # print("after: ",data[16])
         data = numpy.transpose(data.reshape((-1, self.total_channels)))
+        print(data.shape)
 
         return data
 
@@ -124,7 +145,9 @@ class _BaseTrignoDaq(object):
     def _send_cmd(self, command):
         self._comm_socket.send(self._cmd(command))
         resp = self._comm_socket.recv(128)
+        # print(resp.decode())
         self._validate(resp)
+        return resp
 
     @staticmethod
     def _cmd(command):
@@ -178,7 +201,7 @@ class TrignoEMG(_BaseTrignoDaq):
     """
 
     def __init__(self, channel_range, samples_per_read, units='V',
-                 host='localhost', cmd_port=50040, data_port=50041, timeout=10):
+                 host='localhost', cmd_port=50040, data_port=50043, timeout=10):
         super(TrignoEMG, self).__init__(
             host=host, cmd_port=cmd_port, data_port=data_port,
             total_channels=16, timeout=timeout)
@@ -287,6 +310,7 @@ class TrignoAccel(_BaseTrignoDaq):
             is a point in time.
         """
         data = super(TrignoAccel, self).read(self.samples_per_read)
-        print(data)
+        #print("before: ",data)
         data = data[self.channel_range[0]:self.channel_range[1]+1, :]
+        #print("after: ",data)
         return data
