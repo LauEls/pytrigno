@@ -130,7 +130,7 @@ class TrignoData(object):
         """
         data = self.read(self._emg_socket, self.emg_data_channels)
         data = data[self.sensor_range[0]:self.sensor_range[1]+1, :]
-        return data
+        return data*1000
 
     def readIMU(self):
         """
@@ -143,7 +143,7 @@ class TrignoData(object):
             is a point in time.
         """
         data = self.read(self._imu_socket, self.imu_data_channels)
-        data = data[self.sensor_range[0]*9:self.sensor_range[1]*9+1, :]
+        data = data[self.sensor_range[0]*9:self.sensor_range[1]*9+9, :]
         return data
 
     def read(self, data_socket: socket, data_channels: int):
