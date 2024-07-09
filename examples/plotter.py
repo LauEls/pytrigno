@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 
 from pytrigno import TrignoCommand, TrignoData
-from filter import freq_filter
+from filter import linear_envelope
 
 if __name__=="__main__":
     host_ip = "192.168.152.1"
@@ -29,11 +29,13 @@ if __name__=="__main__":
 
     plt.ion()
     figure, (ax_emg,ax_acc,ax_gyro) = plt.subplots(3,1,figsize=(10*3,8*3))
-    line_emg, = ax_emg.plot(emg_x_axis, emg_data)
+    line_emg, = ax_emg.plot(emg_x_axis, emg_data, label='emg')
+    line_emg_filtered, = ax_emg.plot(emg_x_axis, emg_data, label='emg filtered')
     ax_emg.set_ylim(-4, 4)
     ax_emg.set_title("EMG Sensor "+str(sensor_id))
     ax_emg.set_xlabel("sample in buffer")
     ax_emg.set_ylabel("muscle activity [mV]")
+    emg_leg = ax_emg.legend(loc="upper right")
     line_acc_x, = ax_acc.plot(acc_x_axis, acc_data[0], label='x')
     line_acc_y, = ax_acc.plot(acc_x_axis, acc_data[1], label='y')
     line_acc_z, = ax_acc.plot(acc_x_axis, acc_data[2], label='z')
@@ -64,6 +66,7 @@ if __name__=="__main__":
         new_acc_data_size = len(new_imu_data[i_acc[0]])
         new_gyro_data_size = len(new_imu_data[i_gyro[0]])
         emg_data = np.delete(emg_data,np.linspace(0,new_emg_data_size-1,new_emg_data_size,dtype=int))
+        emg_data_filtered = linear_envelope(emg_data, 2000, 5)
         acc_data = np.delete(acc_data,np.linspace(0,new_acc_data_size-1,new_acc_data_size,dtype=int),1)
         gyro_data = np.delete(gyro_data,np.linspace(0,new_gyro_data_size-1,new_gyro_data_size,dtype=int),1)
 
@@ -71,7 +74,8 @@ if __name__=="__main__":
         acc_data = np.concatenate((acc_data, new_imu_data[i_acc[0]:i_acc[1]]), axis=1)
         gyro_data = np.concatenate((gyro_data, new_imu_data[i_gyro[0]:i_gyro[1]]), axis=1)
 
-        line_emg.set_ydata(freq_filter(emg_data,500,0.5))
+        line_emg.set_ydata(emg_data)
+        line_emg_filtered.set_ydata(emg_data_filtered)
         line_acc_x.set_ydata(acc_data[0])
         line_acc_y.set_ydata(acc_data[1])
         line_acc_z.set_ydata(acc_data[2])

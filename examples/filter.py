@@ -21,3 +21,16 @@ def freq_filter(data, f_size, cutoff):
     lpf=signal.firwin(f_size, cutoff, window='hamming')
     f_data=signal.convolve(data, lpf, mode='same')
     return f_data
+
+def linear_envelope(data, f_sample, f_cutoff):
+	#Full-wave rectification
+	data_rect = abs(data)
+
+	#Moving Average Window size
+	w_size = f_sample/(2*f_cutoff)
+
+	#Low-pass filter using moving average
+	data_filtered = np.convolve(data_rect, np.ones(w_size)/w_size, mode='same')
+
+	return data_filtered
+
