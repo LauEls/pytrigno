@@ -15,9 +15,8 @@ setup(
     ],
     keywords='electromyography',
 
-    url='https://github.com/ucdrascal/pytrigno',
-    author='Kenneth Lyons',
-    author_email='ixjlyons@gmail.com',
+    author='Laurenz Elstner',
+    author_email='laurenz.elstner@gmail.com',
     license='MIT',
 
     py_modules=['pytrigno']

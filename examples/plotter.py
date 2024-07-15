@@ -80,6 +80,8 @@ if __name__=="__main__":
         emg_ffc_le_data = ffc_filter(emg_data,2000,50)
         emg_ffc_le_data = linear_envelope(emg_ffc_le_data, 2000, 5)
 
+        # print(max(emg_ffc_le_data))
+
         line_emg.set_ydata(emg_data)
         line_emg_le.set_ydata(emg_le_data)
         line_emg_ffc_le.set_ydata(emg_ffc_le_data)

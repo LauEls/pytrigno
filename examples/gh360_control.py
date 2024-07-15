@@ -12,16 +12,18 @@ if __name__=="__main__":
     host_ip = "192.168.152.1"
     sid_elbow_pos = 1
     sid_elbow_neg = 2
-    emg_max_pos = 2.0
-    emg_max_neg = 2.0
+    emg_max_pos = 0.05
+    emg_max_neg = 0.05
 
     trig_cmd = TrignoCommand(host=host_ip)
     trig_data = TrignoData(sensor_range=(0,3),host=host_ip)
 
+    trig_cmd.start()
+
     width = 1920
     height = 1080
-    duration = 2.5
-    framerate = 60
+    duration = 10
+    framerate = 120
 
     # Make model and data
     model = mujoco.MjModel.from_xml_string(xml)
@@ -30,8 +32,8 @@ if __name__=="__main__":
 
     i_emg_elbow_pos = sid_elbow_pos - 1
     i_emg_elbow_neg = sid_elbow_neg - 1
-    emg_elbow_pos_data = np.zeros(1500)
-    emg_elbow_neg_data = np.zeros(1500)
+    emg_elbow_pos_data = np.zeros(20000)
+    emg_elbow_neg_data = np.zeros(20000)
 
     act_elbow_neg_1 = data.actuator(17)
     act_elbow_pos_1 = data.actuator(18)
@@ -57,10 +59,10 @@ if __name__=="__main__":
             emg_elbow_neg_data_filtered = ffc_filter(emg_elbow_neg_data,2000,50)
             emg_elbow_neg_data_filtered = linear_envelope(emg_elbow_neg_data_filtered, 2000, 5)
 
-            act_elbow_pos_1.ctrl = emg_elbow_pos_data_filtered[len(emg_elbow_pos_data_filtered)-1]*-360/emg_max_pos
-            act_elbow_pos_2.ctrl = emg_elbow_pos_data_filtered[len(emg_elbow_pos_data_filtered)-1]*-360/emg_max_pos
-            act_elbow_neg_1.ctrl = emg_elbow_neg_data_filtered[len(emg_elbow_neg_data_filtered)-1]*-360/emg_max_neg
-            act_elbow_neg_2.ctrl = emg_elbow_neg_data_filtered[len(emg_elbow_neg_data_filtered)-1]*-360/emg_max_neg
+            act_elbow_pos_1.ctrl = emg_elbow_pos_data_filtered[len(emg_elbow_pos_data_filtered)-1000]*-360/emg_max_pos
+            act_elbow_pos_2.ctrl = emg_elbow_pos_data_filtered[len(emg_elbow_pos_data_filtered)-1000]*-360/emg_max_pos
+            act_elbow_neg_1.ctrl = emg_elbow_neg_data_filtered[len(emg_elbow_neg_data_filtered)-1000]*-360/emg_max_neg
+            act_elbow_neg_2.ctrl = emg_elbow_neg_data_filtered[len(emg_elbow_neg_data_filtered)-1000]*-360/emg_max_neg
             # act_elbow_pos_2.ctrl = -100.0
             mujoco.mj_step(model, data)
             if cntr < data.time * framerate:
@@ -73,6 +75,7 @@ if __name__=="__main__":
         
         
         # im = np.flip(im, axis=0)
+    trig_cmd.stop()
         
 
         
