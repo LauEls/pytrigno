@@ -6,13 +6,17 @@ from pytrigno import TrignoCommand, TrignoData
 from filter import linear_envelope, ffc_filter
 
 if __name__=="__main__":
-    host_ip = "192.168.152.1"
-    sensor_id = 1
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("-h", "--host", default="192.168.152.1", type=str)
-    # parser.add_argument("-s", "--sensor_id", default=1, type=int)
-    # args = parser.parse_args()
+    # Read the host ip and the sensor id from the command line if available
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="localhost", type=str)
+    parser.add_argument("--sensor_id", default=1, type=int)
+    args = parser.parse_args()
+    host_ip = args.host
+    sensor_id = args.sensor_id
+    # host_ip = "192.168.152.1"
+    # sensor_id = 1
 
+    # Initialize the Command and the Data Ports
     trig_cmd = TrignoCommand(host=host_ip)
     trig_data = TrignoData(sensor_range=(0,3),host=host_ip)
 
@@ -20,6 +24,7 @@ if __name__=="__main__":
     acc_data_buffer_size = 2000
     gyro_data_buffer_size = 2000
 
+    # Initialize the data buffers
     emg_data = np.zeros(emg_data_buffer_size)
     emg_le_data = np.zeros(emg_data_buffer_size)
     emg_ffc_le_data = np.zeros(emg_data_buffer_size)
@@ -29,9 +34,9 @@ if __name__=="__main__":
     gyro_data = np.zeros((3,gyro_data_buffer_size))
     gyro_x_axis = np.linspace(1,gyro_data_buffer_size,gyro_data_buffer_size)
 
+    # Setup the visualization plot
     plt.ion()
     figure, (ax_emg,ax_acc,ax_gyro) = plt.subplots(3,1,figsize=(10*3,8*3))
-    #TRY ADDING A FIGURE TITLE THAT SHOWS WHICH SENSOR IS PLOTTED!!!!!!!!!!!!!
     line_emg, = ax_emg.plot(emg_x_axis, emg_data, label='emg raw')
     line_emg_le, = ax_emg.plot(emg_x_axis, emg_le_data, label='emg le filter')
     line_emg_ffc_le, = ax_emg.plot(emg_x_axis, emg_ffc_le_data, label='emg ffc+le filter')
@@ -57,15 +62,19 @@ if __name__=="__main__":
     ax_gyro.set_ylabel("angular velocity [deg/s]")
     gyro_leg = ax_gyro.legend(loc="upper right")
 
+    # Send a start broadcasting command to the host machine
     trig_cmd.start()
+
     i_emg = sensor_id -1
     i_acc = ((sensor_id-1)*9, (sensor_id-1)*9+3)
     i_gyro = ((sensor_id-1)*9+3, (sensor_id-1)*9+6)
 
     for i in range(1000):
+        # Read new EMG and IMU data
         new_emg_data = trig_data.readEMG()
         new_imu_data = trig_data.readIMU()
 
+        # Remove the oldest samples from the buffer
         new_emg_data_size = len(new_emg_data[i_emg])
         new_acc_data_size = len(new_imu_data[i_acc[0]])
         new_gyro_data_size = len(new_imu_data[i_gyro[0]])
@@ -73,6 +82,7 @@ if __name__=="__main__":
         acc_data = np.delete(acc_data,np.linspace(0,new_acc_data_size-1,new_acc_data_size,dtype=int),1)
         gyro_data = np.delete(gyro_data,np.linspace(0,new_gyro_data_size-1,new_gyro_data_size,dtype=int),1)
 
+        # Add the new samples to the buffer
         emg_data = np.concatenate((emg_data, new_emg_data[i_emg]), axis=None)
         acc_data = np.concatenate((acc_data, new_imu_data[i_acc[0]:i_acc[1]]), axis=1)
         gyro_data = np.concatenate((gyro_data, new_imu_data[i_gyro[0]:i_gyro[1]]), axis=1)
@@ -80,8 +90,7 @@ if __name__=="__main__":
         emg_ffc_le_data = ffc_filter(emg_data,2000,50)
         emg_ffc_le_data = linear_envelope(emg_ffc_le_data, 2000, 5)
 
-        # print(max(emg_ffc_le_data))
-
+        # Update the plot
         line_emg.set_ydata(emg_data)
         line_emg_le.set_ydata(emg_le_data)
         line_emg_ffc_le.set_ydata(emg_ffc_le_data)
@@ -91,8 +100,8 @@ if __name__=="__main__":
         line_gyro_x.set_ydata(gyro_data[0])
         line_gyro_y.set_ydata(gyro_data[1])
         line_gyro_z.set_ydata(gyro_data[2])
-
         figure.canvas.draw()
         figure.canvas.flush_events()
 
+    # Send a stop broadcasting command to the host machine
     trig_cmd.stop()
